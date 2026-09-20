@@ -1,0 +1,43 @@
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:v3
+    restart: unless-stopped
+    volumes:
+      - server-data:/var/lib/woodpecker
+    environment:
+      WOODPECKER_HOST: "${WOODPECKER_HOST}"
+      WOODPECKER_OPEN: "false"
+      WOODPECKER_ADMIN: "${WOODPECKER_ADMIN}"
+      WOODPECKER_GITHUB: "true"
+      WOODPECKER_GITHUB_CLIENT: "${WOODPECKER_GITHUB_CLIENT}"
+      WOODPECKER_GITHUB_SECRET: "${WOODPECKER_GITHUB_SECRET}"
+      WOODPECKER_AGENT_SECRET: "${WOODPECKER_AGENT_SECRET}"
+    networks:
+      - proxy
+      - backend
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:v3
+    command: agent
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    volumes:
+      - agent-config:/etc/woodpecker
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WOODPECKER_SERVER: "woodpecker-server:9000"
+      WOODPECKER_AGENT_SECRET: "${WOODPECKER_AGENT_SECRET}"
+    networks:
+      - backend
+
+volumes:
+  server-data:
+  agent-config:
+
+networks:
+  proxy:
+    external: true
+    name: "${NGINX_NETWORK}"
+  backend:
+    driver: bridge
